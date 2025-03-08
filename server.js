@@ -125,13 +125,49 @@ wss.ngo.on('connection', (ws) => {
           responder: data.responder
         }));
 
-        // Update NGO UI
+        // Update NGO UI with full details
         broadcastToRole('ngo', {
           type: 'request_updated',
           requestId: data.requestId,
-          status: 'accepted'
+          status: 'accepted',
+          location: request.location,
+          timestamp: request.timestamp
         });
       }
+    }
+    else if (data.type === 'mark_rescued') {
+      const request = activeRequests.get(data.requestId);
+      if (request) {
+        // Notify user
+        request.userWs.send(JSON.stringify({
+          type: 'rescued_notification',
+          requestId: data.requestId
+        }));
+
+        // Update NGO dashboards
+        broadcastToRole('ngo', {
+          type: 'request_updated',
+          requestId: data.requestId,
+          status: 'rescued',
+          location: request.location
+        });
+
+        // Remove from active requests
+        activeRequests.delete(data.requestId);
+      }
+    }
+    else if (data.type === 'add_resource') {
+      // Broadcast to all users
+      broadcastToRole('user', {
+        type: 'resource_update',
+        resource: data.resource
+      });
+
+      // Confirm to NGO
+      broadcastToRole('ngo', {
+        type: 'resource_added',
+        resource: data.resource
+      });
     }
   });
 });

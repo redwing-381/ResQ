@@ -5,26 +5,25 @@
     <style>
         .alert { padding: 10px; margin: 5px; background: #ffcccc; }
         #sosButton {
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background-color: red;
-            color: white;
-            font-size: 24px;
-            border: none;
-            cursor: pointer;
-            margin: 20px;
+            width: 200px; height: 200px; border-radius: 50%;
+            background-color: red; color: white; font-size: 24px;
+            border: none; cursor: pointer; margin: 20px;
+            transition: all 0.3s ease;
         }
-        #sosButton:disabled {
-            background-color: #ff9999;
-            cursor: not-allowed;
-        }
+        #sosButton:disabled { background-color: #ff9999; cursor: not-allowed; }
+        #sosButton.accepted { background-color: orange; }
+        #sosButton.rescued { background-color: green; }
+        .resource-card { padding: 10px; margin: 5px; background: #e6f3ff; }
     </style>
 </head>
 <body>
     <h1>User Dashboard</h1>
     <button id="sosButton" onclick="sendSOS()">SOS EMERGENCY</button>
     <div id="alerts"></div>
+    <div id="resources">
+        <h2>Available Resources</h2>
+        <div id="resourceList"></div>
+    </div>
 
     <script>
         const ws = new WebSocket('ws://localhost:3000/ws/user');
@@ -34,6 +33,7 @@
             const button = document.getElementById('sosButton');
             button.disabled = true;
             button.textContent = "HELP REQUESTED...";
+            button.classList.remove('accepted', 'rescued');
             
             requestId = Date.now().toString();
             
@@ -55,16 +55,36 @@
                 document.getElementById('alerts').appendChild(div);
             }
             else if (data.type === 'sos_accepted') {
+                const button = document.getElementById('sosButton');
+                button.disabled = true;
+                button.textContent = "HELP IS COMING!";
+                button.classList.add('accepted');
+                
                 const div = document.createElement('div');
                 div.className = 'alert';
                 div.textContent = `🚨 Help is coming! ${data.responder} is on the way.`;
                 document.getElementById('alerts').appendChild(div);
+            }
+            else if (data.type === 'rescued_notification') {
+                const button = document.getElementById('sosButton');
+                button.disabled = false;
+                button.textContent = "RESCUED";
+                button.classList.remove('accepted');
+                button.classList.add('rescued');
                 
                 setTimeout(() => {
-                    const button = document.getElementById('sosButton');
-                    button.disabled = false;
                     button.textContent = "SOS EMERGENCY";
+                    button.classList.remove('rescued');
                 }, 30000);
+            }
+            else if (data.type === 'resource_update') {
+                const resourceDiv = document.createElement('div');
+                resourceDiv.className = 'resource-card';
+                resourceDiv.innerHTML = `
+                    <h4>${data.resource.name} (${data.resource.type})</h4>
+                    <p>Location: ${data.resource.location}</p>
+                `;
+                document.getElementById('resourceList').appendChild(resourceDiv);
             }
         };
     </script>

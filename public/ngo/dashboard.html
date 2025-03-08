@@ -4,29 +4,64 @@
     <title>NGO Dashboard</title>
     <style>
         .alert { padding: 10px; margin: 5px; background: #ffcccc; }
-        .sos-request {
-            border: 2px solid red;
-            padding: 15px;
-            margin: 10px;
-            background: #ffe6e6;
-        }
-        .accept-button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            cursor: pointer;
-        }
+        .sos-request { border: 2px solid red; padding: 15px; margin: 10px; background: #ffe6e6; }
+        .accept-button { background-color: #4CAF50; color: white; padding: 8px 16px; border: none; cursor: pointer; }
+        .rescued-button { background-color: #2196F3; color: white; padding: 8px 16px; border: none; cursor: pointer; }
+        .tab-buttons { margin: 20px 0; }
+        .tab-button { padding: 10px 20px; margin-right: 10px; cursor: pointer; }
+        .active-tab { background-color: #4CAF50; color: white; }
+        .resource-form { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .resource-input { margin: 5px; padding: 8px; width: 200px; }
+        .accepted-request { border-color: orange; }
+        .rescued-request { border-color: green; }
     </style>
 </head>
 <body>
     <h1>NGO Dashboard</h1>
-    <div id="sosRequests"></div>
+    
+    <div class="tab-buttons">
+        <button class="tab-button active-tab" onclick="showTab('rescue')">Rescue</button>
+        <button class="tab-button" onclick="showTab('resource')">Resource</button>
+    </div>
+
+    <div id="rescueTab" class="tab-content">
+        <h2>Rescue Operations</h2>
+        <div id="sosRequests"></div>
+        <h3>Completed Rescues</h3>
+        <div id="completedRescues"></div>
+    </div>
+
+    <div id="resourceTab" class="tab-content" style="display:none;">
+        <h2>Resource Management</h2>
+        <div class="resource-form">
+            <input type="text" id="resourceName" class="resource-input" placeholder="Name">
+            <select id="resourceType" class="resource-input">
+                <option value="shelter">Shelter</option>
+                <option value="medical">Medical Facility</option>
+                <option value="food">Food Center</option>
+            </select>
+            <input type="text" id="resourceLocation" class="resource-input" placeholder="Location">
+            <button onclick="addResource()">Add Resource</button>
+        </div>
+        <div id="resourcesList"></div>
+    </div>
+
     <div id="alerts"></div>
 
     <script>
         const ws = new WebSocket('ws://localhost:3000/ws/ngo');
         
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active-tab');
+            });
+            document.getElementById(`${tabName}Tab`).style.display = 'block';
+            event.target.classList.add('active-tab');
+        }
+
         function acceptRequest(requestId) {
             ws.send(JSON.stringify({
                 type: 'accept_sos',
@@ -35,16 +70,30 @@
             }));
         }
 
+        function markRescued(requestId) {
+            ws.send(JSON.stringify({
+                type: 'mark_rescued',
+                requestId: requestId
+            }));
+        }
+
+        function addResource() {
+            const resource = {
+                name: document.getElementById('resourceName').value,
+                type: document.getElementById('resourceType').value,
+                location: document.getElementById('resourceLocation').value
+            };
+            
+            ws.send(JSON.stringify({
+                type: 'add_resource',
+                resource: resource
+            }));
+        }
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
-            if (data.type === 'disaster_alert') {
-                const div = document.createElement('div');
-                div.className = 'alert';
-                div.textContent = `🚨 Government Alert: ${data.content}`;
-                document.getElementById('alerts').appendChild(div);
-            }
-            else if (data.type === 'sos_request') {
+            if (data.type === 'sos_request') {
                 const requestDiv = document.createElement('div');
                 requestDiv.className = 'sos-request';
                 requestDiv.id = `request-${data.requestId}`;
@@ -52,8 +101,7 @@
                     <h3>🚨 EMERGENCY REQUEST</h3>
                     <p>Location: ${data.location}</p>
                     <p>Time: ${new Date(data.timestamp).toLocaleTimeString()}</p>
-                    <button class="accept-button" 
-                            onclick="acceptRequest('${data.requestId}')">
+                    <button class="accept-button" onclick="acceptRequest('${data.requestId}')">
                         Accept Request
                     </button>
                 `;
@@ -61,13 +109,39 @@
             }
             else if (data.type === 'request_updated') {
                 const requestDiv = document.getElementById(`request-${data.requestId}`);
-                if (requestDiv && data.status === 'accepted') {
-                    requestDiv.innerHTML = `
-                        <h3>✅ ACCEPTED REQUEST</h3>
-                        <p>Location: ${data.location}</p>
-                        <p style="color: green;">Responder en route</p>
-                    `;
+                if (requestDiv) {
+                    if (data.status === 'accepted') {
+                        requestDiv.innerHTML = `
+                            <h3>✅ ACCEPTED REQUEST</h3>
+                            <p>Location: ${data.location}</p>
+                            <p>Time Accepted: ${new Date(data.timestamp).toLocaleTimeString()}</p>
+                            <button class="rescued-button" onclick="markRescued('${data.requestId}')">
+                                Mark as Rescued
+                            </button>
+                        `;
+                        requestDiv.classList.add('accepted-request');
+                    }
+                    else if (data.status === 'rescued') {
+                        document.getElementById('sosRequests').removeChild(requestDiv);
+                        const completedDiv = document.createElement('div');
+                        completedDiv.className = 'sos-request rescued-request';
+                        completedDiv.innerHTML = `
+                            <h3>✅ RESCUED</h3>
+                            <p>Location: ${data.location}</p>
+                            <p>Time Completed: ${new Date().toLocaleTimeString()}</p>
+                        `;
+                        document.getElementById('completedRescues').appendChild(completedDiv);
+                    }
                 }
+            }
+            else if (data.type === 'resource_added') {
+                const resourceDiv = document.createElement('div');
+                resourceDiv.className = 'alert';
+                resourceDiv.innerHTML = `
+                    <h4>${data.resource.name} (${data.resource.type})</h4>
+                    <p>Location: ${data.resource.location}</p>
+                `;
+                document.getElementById('resourcesList').appendChild(resourceDiv);
             }
         };
     </script>
