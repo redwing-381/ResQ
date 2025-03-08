@@ -28,7 +28,7 @@
     <script>
         const ws = new WebSocket('ws://localhost:3000/ws/user');
         let requestId = null;
-
+    
         function sendSOS() {
             const button = document.getElementById('sosButton');
             button.disabled = true;
@@ -40,19 +40,27 @@
             ws.send(JSON.stringify({
                 type: 'sos_request',
                 requestId: requestId,
-                location: "User Location",
+                location: "User Location",  // Consider adding geolocation API here
                 timestamp: new Date().toISOString()
             }));
         }
-
+    
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
             if (data.type === 'disaster_alert') {
-                const div = document.createElement('div');
-                div.className = 'alert';
-                div.textContent = `🚨 Government Alert: ${data.content}`;
-                document.getElementById('alerts').appendChild(div);
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert';
+                alertDiv.innerHTML = `
+                    <div class="alert-header">🚨 ${data.content}</div>
+                    <div class="guidelines">
+                        <p>Follow these safety measures:</p>
+                        <ul>
+                            ${data.guidelines.map(g => `<li>${g}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                document.getElementById('alerts').appendChild(alertDiv);
             }
             else if (data.type === 'sos_accepted') {
                 const button = document.getElementById('sosButton');
@@ -60,18 +68,27 @@
                 button.textContent = "HELP IS COMING!";
                 button.classList.add('accepted');
                 
-                const div = document.createElement('div');
-                div.className = 'alert';
-                div.textContent = `🚨 Help is coming! ${data.responder} is on the way.`;
-                document.getElementById('alerts').appendChild(div);
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert';
+                alertDiv.innerHTML = `
+                    <div class="alert-header">🚨 Rescue Team En Route</div>
+                    <p>${data.responder} is coming to your location.</p>
+                    <p>Stay in a safe position and keep your phone accessible.</p>
+                `;
+                document.getElementById('alerts').appendChild(alertDiv);
             }
             else if (data.type === 'rescued_notification') {
                 const button = document.getElementById('sosButton');
                 button.disabled = false;
-                button.textContent = "RESCUED";
+                button.textContent = "RESCUED 🎉";
                 button.classList.remove('accepted');
                 button.classList.add('rescued');
                 
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert success';
+                alertDiv.textContent = "You've been successfully rescued! Stay safe!";
+                document.getElementById('alerts').appendChild(alertDiv);
+    
                 setTimeout(() => {
                     button.textContent = "SOS EMERGENCY";
                     button.classList.remove('rescued');
@@ -82,7 +99,8 @@
                 resourceDiv.className = 'resource-card';
                 resourceDiv.innerHTML = `
                     <h4>${data.resource.name} (${data.resource.type})</h4>
-                    <p>Location: ${data.resource.location}</p>
+                    <p class="location">📍 ${data.resource.location}</p>
+                    <p class="update-time">Updated: ${new Date().toLocaleTimeString()}</p>
                 `;
                 document.getElementById('resourceList').appendChild(resourceDiv);
             }

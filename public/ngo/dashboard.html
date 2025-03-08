@@ -61,87 +61,137 @@
             document.getElementById(`${tabName}Tab`).style.display = 'block';
             event.target.classList.add('active-tab');
         }
-
+    
         function acceptRequest(requestId) {
             ws.send(JSON.stringify({
                 type: 'accept_sos',
                 requestId: requestId,
-                responder: "NGO Team #" + Math.floor(Math.random() * 1000)
+                responder: "NGO Team #" + Math.floor(Math.random() * 1000).toString().padStart(4, '0')
             }));
         }
-
+    
         function markRescued(requestId) {
             ws.send(JSON.stringify({
                 type: 'mark_rescued',
                 requestId: requestId
             }));
         }
-
+    
         function addResource() {
             const resource = {
                 name: document.getElementById('resourceName').value,
                 type: document.getElementById('resourceType').value,
-                location: document.getElementById('resourceLocation').value
+                location: document.getElementById('resourceLocation').value,
+                timestamp: new Date().toISOString()
             };
             
-            ws.send(JSON.stringify({
-                type: 'add_resource',
-                resource: resource
-            }));
+            if(resource.name && resource.location) {
+                ws.send(JSON.stringify({
+                    type: 'add_resource',
+                    resource: resource
+                }));
+                // Clear form fields
+                document.getElementById('resourceName').value = '';
+                document.getElementById('resourceLocation').value = '';
+            }
         }
-
+    
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
             if (data.type === 'sos_request') {
                 const requestDiv = document.createElement('div');
-                requestDiv.className = 'sos-request';
+                requestDiv.className = 'sos-request pending';
                 requestDiv.id = `request-${data.requestId}`;
                 requestDiv.innerHTML = `
-                    <h3>🚨 EMERGENCY REQUEST</h3>
-                    <p>Location: ${data.location}</p>
-                    <p>Time: ${new Date(data.timestamp).toLocaleTimeString()}</p>
-                    <button class="accept-button" onclick="acceptRequest('${data.requestId}')">
-                        Accept Request
-                    </button>
+                    <div class="request-header">
+                        <span class="emergency-icon">🚨</span>
+                        <h3>EMERGENCY REQUEST</h3>
+                        <span class="request-time">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="request-details">
+                        <p><strong>Location:</strong> ${data.location}</p>
+                        <div class="request-actions">
+                            <button class="accept-button" onclick="acceptRequest('${data.requestId}')">
+                                Accept Request
+                            </button>
+                        </div>
+                    </div>
                 `;
-                document.getElementById('sosRequests').appendChild(requestDiv);
+                document.getElementById('sosRequests').prepend(requestDiv);
             }
             else if (data.type === 'request_updated') {
                 const requestDiv = document.getElementById(`request-${data.requestId}`);
                 if (requestDiv) {
                     if (data.status === 'accepted') {
                         requestDiv.innerHTML = `
-                            <h3>✅ ACCEPTED REQUEST</h3>
-                            <p>Location: ${data.location}</p>
-                            <p>Time Accepted: ${new Date(data.timestamp).toLocaleTimeString()}</p>
-                            <button class="rescued-button" onclick="markRescued('${data.requestId}')">
-                                Mark as Rescued
-                            </button>
+                            <div class="request-header">
+                                <span class="status-icon">✅</span>
+                                <h3>ACCEPTED REQUEST</h3>
+                                <span class="request-time">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="request-details">
+                                <p><strong>Location:</strong> ${data.location}</p>
+                                <p><strong>Responder:</strong> ${data.responder}</p>
+                                <div class="request-actions">
+                                    <button class="rescued-button" onclick="markRescued('${data.requestId}')">
+                                        Mark as Rescued
+                                    </button>
+                                </div>
+                            </div>
                         `;
-                        requestDiv.classList.add('accepted-request');
+                        requestDiv.className = 'sos-request accepted';
                     }
                     else if (data.status === 'rescued') {
-                        document.getElementById('sosRequests').removeChild(requestDiv);
                         const completedDiv = document.createElement('div');
-                        completedDiv.className = 'sos-request rescued-request';
+                        completedDiv.className = 'sos-request rescued';
                         completedDiv.innerHTML = `
-                            <h3>✅ RESCUED</h3>
-                            <p>Location: ${data.location}</p>
-                            <p>Time Completed: ${new Date().toLocaleTimeString()}</p>
+                            <div class="request-header">
+                                <span class="status-icon">✅</span>
+                                <h3>RESCUED</h3>
+                                <span class="request-time">${new Date().toLocaleTimeString()}</span>
+                            </div>
+                            <div class="request-details">
+                                <p><strong>Location:</strong> ${data.location}</p>
+                                <p><strong>Rescue Time:</strong> ${new Date().toLocaleTimeString()}</p>
+                            </div>
                         `;
-                        document.getElementById('completedRescues').appendChild(completedDiv);
+                        document.getElementById('completedRescues').prepend(completedDiv);
+                        requestDiv.remove();
                     }
                 }
             }
             else if (data.type === 'resource_added') {
                 const resourceDiv = document.createElement('div');
-                resourceDiv.className = 'alert';
+                resourceDiv.className = 'resource-card';
                 resourceDiv.innerHTML = `
-                    <h4>${data.resource.name} (${data.resource.type})</h4>
-                    <p>Location: ${data.resource.location}</p>
+                    <div class="resource-header">
+                        <h4>${data.resource.name}</h4>
+                        <span class="resource-type">${data.resource.type.toUpperCase()}</span>
+                    </div>
+                    <div class="resource-details">
+                        <p class="location">📍 ${data.resource.location}</p>
+                        <p class="timestamp">Added: ${new Date(data.resource.timestamp).toLocaleString()}</p>
+                    </div>
                 `;
-                document.getElementById('resourcesList').appendChild(resourceDiv);
+                document.getElementById('resourcesList').prepend(resourceDiv);
+            }
+            else if (data.type === 'disaster_alert') {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'disaster-alert';
+                alertDiv.innerHTML = `
+                    <div class="alert-header">
+                        <span>⚠️</span>
+                        <h4>${data.content}</h4>
+                    </div>
+                    <div class="alert-guidelines">
+                        <p>Required Actions:</p>
+                        <ul>
+                            ${data.guidelines.map(g => `<li>${g}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                document.getElementById('alerts').prepend(alertDiv);
             }
         };
     </script>

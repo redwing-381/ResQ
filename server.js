@@ -8,21 +8,17 @@ const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 3000;
 
-// WebSocket servers for different roles
 const wss = {
   user: new WebSocket.Server({ noServer: true }),
   government: new WebSocket.Server({ noServer: true }),
   ngo: new WebSocket.Server({ noServer: true })
 };
 
-// Store active SOS requests
 const activeRequests = new Map();
 
-// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Handle WebSocket upgrades
 server.on('upgrade', (request, socket, head) => {
   const pathname = request.url;
   
@@ -43,31 +39,33 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
-// Government WebSocket handler
 wss.government.on('connection', (ws) => {
   console.log('Government connected');
   
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     
-    if (data.type === 'disaster_alert') {
-      // Broadcast alert to users and NGOs
+    if (data.type === 'verify_prediction') {
+      // Broadcast to users
       broadcastToRole('user', { 
-        type: 'disaster_alert', 
-        content: data.content,
+        type: 'disaster_alert',
+        content: `VERIFIED ${data.disaster.toUpperCase()} ALERT!`,
+        guidelines: data.guidelines.user,
         timestamp: new Date().toISOString()
       });
       
+      // Broadcast to NGOs
       broadcastToRole('ngo', { 
         type: 'disaster_alert', 
-        content: data.content,
+        content: `OFFICIAL ${data.disaster.toUpperCase()} NOTIFICATION`,
+        guidelines: data.guidelines.ngo,
         timestamp: new Date().toISOString()
       });
 
-      // Confirm alert sent
+      // Send confirmation to government
       ws.send(JSON.stringify({ 
-        type: 'alert_sent', 
-        content: data.content 
+        type: 'alert_sent',
+        content: `Alert broadcasted with guidelines`
       }));
     }
   });
@@ -108,6 +106,7 @@ wss.ngo.on('connection', (ws) => {
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     
+    // Add this missing handler for accept_sos
     if (data.type === 'accept_sos') {
       const request = activeRequests.get(data.requestId);
       if (request && request.status === 'pending') {
@@ -115,9 +114,10 @@ wss.ngo.on('connection', (ws) => {
         activeRequests.set(data.requestId, {
           ...request,
           status: 'accepted',
-          responder: data.responder
+          responder: data.responder,
+          acceptedAt: new Date().toISOString()
         });
-        
+
         // Notify user
         request.userWs.send(JSON.stringify({
           type: 'sos_accepted',
@@ -125,17 +125,19 @@ wss.ngo.on('connection', (ws) => {
           responder: data.responder
         }));
 
-        // Update NGO UI with full details
+        // Update NGO dashboards
         broadcastToRole('ngo', {
           type: 'request_updated',
           requestId: data.requestId,
           status: 'accepted',
           location: request.location,
-          timestamp: request.timestamp
+          timestamp: request.timestamp,
+          responder: data.responder,
+          acceptedAt: new Date().toISOString()
         });
       }
     }
-    else if (data.type === 'mark_rescued') {
+    else if (data.type === 'mark_rescued') {  // Remove duplicate handler
       const request = activeRequests.get(data.requestId);
       if (request) {
         // Notify user
@@ -154,6 +156,13 @@ wss.ngo.on('connection', (ws) => {
 
         // Remove from active requests
         activeRequests.delete(data.requestId);
+
+        // Log to government
+        broadcastToRole('government', {
+          type: 'rescue_log',
+          location: request.location,
+          timestamp: new Date().toISOString()
+        });
       }
     }
     else if (data.type === 'add_resource') {
