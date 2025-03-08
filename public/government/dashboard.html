@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Government Dashboard</title>
+    <style>
+        .alert { padding: 10px; margin: 5px; background: #ffcccc; }
+        .prediction-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            max-width: 500px;
+        }
+        #guidelines {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f8ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Government Dashboard</h1>
+    
+    <div class="prediction-card">
+        <h2>Disaster Prediction</h2>
+        <p>Predicted Disaster: <strong id="predictedDisaster">Flood</strong></p>
+        <p>Probability: <strong id="predictionProbability">70%</strong></p>
+        <button onclick="sendAlert()">Verify & Send Alert</button>
+    </div>
+
+    <div id="guidelines">
+        <h3>Government Guidelines</h3>
+        <ul>
+            <li>Activate emergency response teams</li>
+            <li>Evacuate high-risk areas immediately</li>
+            <li>Open all emergency shelters</li>
+            <li>Coordinate with NGOs for relief distribution</li>
+            <li>Set up 24/7 emergency hotlines</li>
+        </ul>
+    </div>
+
+    <div id="alerts"></div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3000/ws/government');
+        
+        function sendAlert() {
+            const disaster = document.getElementById('predictedDisaster').textContent;
+            const probability = document.getElementById('predictionProbability').textContent;
+            const alertMessage = `${disaster} alert (${probability} probability) - Evacuation orders issued!`;
+
+            ws.send(JSON.stringify({
+                type: 'disaster_alert',
+                content: alertMessage
+            }));
+            
+            // Show guidelines
+            document.getElementById('guidelines').style.display = 'block';
+        }
+
+        // Display sent alerts
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'alert_sent') {
+                const div = document.createElement('div');
+                div.className = 'alert';
+                div.textContent = `Alert Broadcasted: ${data.content}`;
+                document.getElementById('alerts').appendChild(div);
+            }
+        };
+    </script>
+</body>
+</html>

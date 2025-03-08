@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NGO Dashboard</title>
+    <style>
+        .alert { padding: 10px; margin: 5px; background: #ffcccc; }
+        .sos-request {
+            border: 2px solid red;
+            padding: 15px;
+            margin: 10px;
+            background: #ffe6e6;
+        }
+        .accept-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>NGO Dashboard</h1>
+    <div id="sosRequests"></div>
+    <div id="alerts"></div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3000/ws/ngo');
+        
+        function acceptRequest(requestId) {
+            ws.send(JSON.stringify({
+                type: 'accept_sos',
+                requestId: requestId,
+                responder: "NGO Team #" + Math.floor(Math.random() * 1000)
+            }));
+        }
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'disaster_alert') {
+                const div = document.createElement('div');
+                div.className = 'alert';
+                div.textContent = `🚨 Government Alert: ${data.content}`;
+                document.getElementById('alerts').appendChild(div);
+            }
+            else if (data.type === 'sos_request') {
+                const requestDiv = document.createElement('div');
+                requestDiv.className = 'sos-request';
+                requestDiv.id = `request-${data.requestId}`;
+                requestDiv.innerHTML = `
+                    <h3>🚨 EMERGENCY REQUEST</h3>
+                    <p>Location: ${data.location}</p>
+                    <p>Time: ${new Date(data.timestamp).toLocaleTimeString()}</p>
+                    <button class="accept-button" 
+                            onclick="acceptRequest('${data.requestId}')">
+                        Accept Request
+                    </button>
+                `;
+                document.getElementById('sosRequests').appendChild(requestDiv);
+            }
+            else if (data.type === 'request_updated') {
+                const requestDiv = document.getElementById(`request-${data.requestId}`);
+                if (requestDiv && data.status === 'accepted') {
+                    requestDiv.innerHTML = `
+                        <h3>✅ ACCEPTED REQUEST</h3>
+                        <p>Location: ${data.location}</p>
+                        <p style="color: green;">Responder en route</p>
+                    `;
+                }
+            }
+        };
+    </script>
+</body>
+</html>

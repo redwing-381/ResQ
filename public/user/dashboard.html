@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Dashboard</title>
+    <style>
+        .alert { padding: 10px; margin: 5px; background: #ffcccc; }
+        #sosButton {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: red;
+            color: white;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            margin: 20px;
+        }
+        #sosButton:disabled {
+            background-color: #ff9999;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Dashboard</h1>
+    <button id="sosButton" onclick="sendSOS()">SOS EMERGENCY</button>
+    <div id="alerts"></div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3000/ws/user');
+        let requestId = null;
+
+        function sendSOS() {
+            const button = document.getElementById('sosButton');
+            button.disabled = true;
+            button.textContent = "HELP REQUESTED...";
+            
+            requestId = Date.now().toString();
+            
+            ws.send(JSON.stringify({
+                type: 'sos_request',
+                requestId: requestId,
+                location: "User Location",
+                timestamp: new Date().toISOString()
+            }));
+        }
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'disaster_alert') {
+                const div = document.createElement('div');
+                div.className = 'alert';
+                div.textContent = `🚨 Government Alert: ${data.content}`;
+                document.getElementById('alerts').appendChild(div);
+            }
+            else if (data.type === 'sos_accepted') {
+                const div = document.createElement('div');
+                div.className = 'alert';
+                div.textContent = `🚨 Help is coming! ${data.responder} is on the way.`;
+                document.getElementById('alerts').appendChild(div);
+                
+                setTimeout(() => {
+                    const button = document.getElementById('sosButton');
+                    button.disabled = false;
+                    button.textContent = "SOS EMERGENCY";
+                }, 30000);
+            }
+        };
+    </script>
+</body>
+</html>
