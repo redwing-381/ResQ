@@ -154,6 +154,10 @@
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+
+            function formatCoordinates(coords) {
+    return `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+}
             
             if (data.type === 'rescue_log') {
                 const logEntry = document.createElement('div');
@@ -161,7 +165,8 @@
                 logEntry.innerHTML = `
                     <span style="color: #007bff; font-weight: bold;">✓</span> 
                     [${new Date(data.timestamp).toLocaleString()}] 
-                    Successful rescue at ${data.location}
+                    Successful rescue at <span class="coordinates">${formatCoordinates(data.location)}</span>
+        </p>
                 `;
                 document.getElementById('logs').appendChild(logEntry);
                 document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
