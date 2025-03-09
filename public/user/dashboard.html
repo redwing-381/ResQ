@@ -1,31 +1,266 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>User Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Dashboard</title>
     <style>
-        .alert { padding: 10px; margin: 5px; background: #ffcccc; }
-        #sosButton {
-            width: 200px; height: 200px; border-radius: 50%;
-            background-color: red; color: white; font-size: 24px;
-            border: none; cursor: pointer; margin: 20px;
-            transition: all 0.3s ease;
+        :root {
+            --primary: #dc2626;
+            --secondary: #2563eb;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --text: #1e293b;
         }
-        #sosButton:disabled { background-color: #ff9999; cursor: not-allowed; }
-        #sosButton.accepted { background-color: orange; }
-        #sosButton.rescued { background-color: green; }
-        .resource-card { padding: 10px; margin: 5px; background: #e6f3ff; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--background);
+            color: var(--text);
+        }
+
+        /* SOS Section (70% height) */
+        .sos-container {
+            flex: 7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(45deg, #ffebee, #fff);
+        }
+
+        #sosButton {
+            width: min(70vw, 300px);
+            height: min(70vw, 300px);
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        #sosButton:disabled {
+            background: #ff9999;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #sosButton.accepted {
+            background: #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+
+        #sosButton.rescued {
+            background: #16a34a;
+            box-shadow: 0 8px 24px rgba(22, 163, 74, 0.3);
+        }
+
+        /* Navigation Section (30% height) */
+        .nav-container {
+            flex: 3;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background: #e2e8f0;
+        }
+
+        .nav-button {
+            background: var(--surface);
+            border: none;
+            padding: 1.5rem;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            flex-direction: column;
+        }
+
+        .nav-button.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        /* Content Panels */
+        .content-panel {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 85vh;
+            background: var(--surface);
+            border-radius: 2rem 2rem 0 0;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .content-panel.active {
+            display: block;
+        }
+
+        /* Alert and Resource Cards */
+        .alert-card, .resource-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .alert-time {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .alert-content ul {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .alert-content li {
+            margin-bottom: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .resource-card {
+            display: grid;
+            grid-template-columns: 40px 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .resource-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .resource-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .resource-type {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .resource-location {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                padding: 1.5rem;
+                font-size: 1.2rem;
+                gap: 1rem;
+            }
+
+            .content-panel {
+                height: 90vh;
+                padding: 1.5rem;
+            }
+
+            .alert-card h3 {
+                font-size: 1.3rem;
+                gap: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>User Dashboard</h1>
-    <button id="sosButton" onclick="sendSOS()">SOS EMERGENCY</button>
-    <div id="alerts"></div>
-    <div id="resources">
+    <div class="sos-container">
+        <button id="sosButton" onclick="sendSOS()">SOS EMERGENCY</button>
+    </div>
+
+    <div class="nav-container">
+        <button class="nav-button" onclick="showPanel('alerts')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M10 5.91667C10 5.09672 10.3582 4.31947 10.9763 3.76822C11.5944 3.21697 12.4163 2.94444 13.2631 3.01278C14.5611 3.12262 15.7733 3.66823 16.69 4.55151C17.6067 5.4348 18.1696 6.59693 18.28 7.83333C18.28 9.66667 18 10.5 18 10.5H6C6 10.5 5.72 9.66667 5.72 7.83333C5.83044 6.59693 6.39333 5.4348 7.31004 4.55151C8.22675 3.66823 9.43893 3.12262 10.7369 3.01278C11.5837 2.94444 12.4056 3.21697 13.0237 3.76822C13.6418 4.31947 14 5.09672 14 5.91667M10 10.5V14.8333L8 16.5M14 10.5V14.8333L16 16.5" stroke-width="2"/>
+            </svg>
+            Alerts
+        </button>
+        
+        <button class="nav-button" onclick="showPanel('resources')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 2L3 7V17L12 22L21 17V7L12 2ZM12 12.5C11.7239 12.5 11.5 12.2761 11.5 12C11.5 11.7239 11.7239 11.5 12 11.5C12.2761 11.5 12.5 11.7239 12.5 12C12.5 12.2761 12.2761 12.5 12 12.5ZM12 15.5C11.7239 15.5 11.5 15.2761 11.5 15C11.5 14.7239 11.7239 14.5 12 14.5C12.2761 14.5 12.5 14.7239 12.5 15C12.5 15.2761 12.2761 15.5 12 15.5Z" stroke-width="2"/>
+            </svg>
+            Resources
+        </button>
+    </div>
+
+    <!-- Alerts Panel -->
+    <div id="alertsPanel" class="content-panel">
+        <h2>Emergency Alerts</h2>
+        <div id="alerts"></div>
+    </div>
+
+    <!-- Resources Panel -->
+    <div id="resourcesPanel" class="content-panel">
         <h2>Available Resources</h2>
         <div id="resourceList"></div>
     </div>
 
     <script>
+        // Panel Management
+        function showPanel(panelId) {
+            document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`${panelId}Panel`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.content-panel') && !e.target.closest('.nav-button')) {
+                document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+            }
+        });
+
+        // WebSocket Integration
         const ws = new WebSocket('ws://localhost:3000/ws/user');
         let requestId = null;
     
@@ -37,74 +272,131 @@
             
             requestId = Date.now().toString();
             
-            ws.send(JSON.stringify({
-                type: 'sos_request',
-                requestId: requestId,
-                location: "User Location",  // Consider adding geolocation API here
-                timestamp: new Date().toISOString()
-            }));
+            // Add geolocation logic here
+            navigator.geolocation.getCurrentPosition(position => {
+                ws.send(JSON.stringify({
+                    type: 'sos_request',
+                    requestId: requestId,
+                    location: {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    },
+                    timestamp: new Date().toISOString()
+                }));
+            }, error => {
+                console.error('Geolocation error:', error);
+                button.disabled = false;
+                button.textContent = "SOS EMERGENCY";
+            });
         }
-    
+
+        // Message Handling
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            const container = data.type === 'resource_update' 
+                ? document.getElementById('resourceList') 
+                : document.getElementById('alerts');
+
+            const element = createCardElement(data);
+            container.prepend(element);
+            updateSOSState(data);
+        };
+
+        function createCardElement(data) {
+            const div = document.createElement('div');
             
-            if (data.type === 'disaster_alert') {
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert';
-                alertDiv.innerHTML = `
-                    <div class="alert-header">🚨 ${data.content}</div>
-                    <div class="guidelines">
-                        <p>Follow these safety measures:</p>
-                        <ul>
-                            ${data.guidelines.map(g => `<li>${g}</li>`).join('')}
-                        </ul>
+            if(data.type === 'disaster_alert') {
+                div.className = 'alert-card';
+                div.innerHTML = `
+                    <div class="alert-header">
+                        <h3>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 9V11M12 15H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
+                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            ${data.content}
+                        </h3>
+                        <span class="alert-time">${new Date(data.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="alert-content">
+                        <p style="font-weight: 500; color: var(--text);">Safety instructions:</p>
+                        <ul>${data.guidelines.map(g => `<li>${g}</li>`).join('')}</ul>
                     </div>
                 `;
-                document.getElementById('alerts').appendChild(alertDiv);
             }
-            else if (data.type === 'sos_accepted') {
-                const button = document.getElementById('sosButton');
-                button.disabled = true;
-                button.textContent = "HELP IS COMING!";
-                button.classList.add('accepted');
-                
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert';
-                alertDiv.innerHTML = `
-                    <div class="alert-header">🚨 Rescue Team En Route</div>
-                    <p>${data.responder} is coming to your location.</p>
-                    <p>Stay in a safe position and keep your phone accessible.</p>
+            else if(data.type === 'resource_update') {
+                div.className = 'resource-card';
+                div.innerHTML = `
+                    <div class="resource-icon">
+                        ${getResourceIcon(data.resource.type)}
+                    </div>
+                    <div class="resource-details">
+                        <h3>${data.resource.name}</h3>
+                        <span class="resource-type">${data.resource.type.toUpperCase()}</span>
+                        <div class="resource-location">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" 
+                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="12" cy="9" r="2.5" stroke-width="2"/>
+                            </svg>
+                            ${data.resource.location}
+                        </div>
+                        <small class="update-time">Updated: ${new Date().toLocaleTimeString()}</small>
+                    </div>
                 `;
-                document.getElementById('alerts').appendChild(alertDiv);
             }
-            else if (data.type === 'rescued_notification') {
-                const button = document.getElementById('sosButton');
-                button.disabled = false;
-                button.textContent = "RESCUED 🎉";
-                button.classList.remove('accepted');
-                button.classList.add('rescued');
-                
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert success';
-                alertDiv.textContent = "You've been successfully rescued! Stay safe!";
-                document.getElementById('alerts').appendChild(alertDiv);
-    
-                setTimeout(() => {
-                    button.textContent = "SOS EMERGENCY";
-                    button.classList.remove('rescued');
-                }, 30000);
-            }
-            else if (data.type === 'resource_update') {
-                const resourceDiv = document.createElement('div');
-                resourceDiv.className = 'resource-card';
-                resourceDiv.innerHTML = `
-                    <h4>${data.resource.name} (${data.resource.type})</h4>
-                    <p class="location">📍 ${data.resource.location}</p>
-                    <p class="update-time">Updated: ${new Date().toLocaleTimeString()}</p>
+            else if(data.type === 'sos_accepted') {
+                div.className = 'alert-card';
+                div.innerHTML = `
+                    <div class="alert-header">
+                        <h3>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 17.25L16.5 12 9 6.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Rescue Team En Route
+                        </h3>
+                        <span class="alert-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <p>${data.responder} is coming to your location</p>
                 `;
-                document.getElementById('resourceList').appendChild(resourceDiv);
             }
-        };
+
+            return div;
+        }
+
+        function getResourceIcon(type) {
+            const icons = {
+                shelter: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
+                medical: '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>',
+                food: '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m18.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+            };
+            return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                ${icons[type] || '<circle cx="12" cy="12" r="9"/>'}
+            </svg>`;
+        }
+
+        function updateSOSState(data) {
+            const button = document.getElementById('sosButton');
+            
+            switch(data.type) {
+                case 'sos_accepted':
+                    button.classList.add('accepted');
+                    button.textContent = "HELP IS COMING!";
+                    break;
+                    
+                case 'rescued_notification':
+                    button.disabled = false;
+                    button.textContent = "RESCUED 🎉";
+                    button.classList.remove('accepted');
+                    button.classList.add('rescued');
+                    setTimeout(() => {
+                        button.textContent = "SOS EMERGENCY";
+                        button.classList.remove('rescued');
+                    }, 30000);
+                    break;
+            }
+        }
     </script>
 </body>
 </html>
