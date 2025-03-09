@@ -265,30 +265,47 @@
         let requestId = null;
     
         function sendSOS() {
-            const button = document.getElementById('sosButton');
-            button.disabled = true;
-            button.textContent = "HELP REQUESTED...";
-            button.classList.remove('accepted', 'rescued');
-            
-            requestId = Date.now().toString();
-            
-            // Add geolocation logic here
-            navigator.geolocation.getCurrentPosition(position => {
+    const button = document.getElementById('sosButton');
+    button.disabled = true;
+    button.textContent = "LOCATING...";
+    button.classList.remove('accepted', 'rescued');
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const coords = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                
+                requestId = Date.now().toString();
                 ws.send(JSON.stringify({
                     type: 'sos_request',
                     requestId: requestId,
-                    location: {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    },
+                    location: coords,
                     timestamp: new Date().toISOString()
                 }));
-            }, error => {
+                
+                button.textContent = "HELP REQUESTED...";
+            },
+            error => {
                 console.error('Geolocation error:', error);
                 button.disabled = false;
                 button.textContent = "SOS EMERGENCY";
-            });
-        }
+                alert('Please enable location services to send SOS!');
+            },
+            { 
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        alert("Geolocation is not supported by this browser.");
+        button.disabled = false;
+        button.textContent = "SOS EMERGENCY";
+    }
+}
 
         // Message Handling
         ws.onmessage = (event) => {

@@ -308,28 +308,35 @@
         };
 
         function addRequest(data) {
-            const div = document.createElement('div');
-            div.className = 'request-card';
-            div.id = `request-${data.requestId}`;
-            div.innerHTML = `
-                <div class="request-header">
-                    <h3>🚨 Emergency Request</h3>
-                    <small>${new Date(data.timestamp).toLocaleTimeString()}</small>
-                </div>
-                <p><strong>Location:</strong> ${data.location}</p>
-                <div class="request-actions">
-                    <button onclick="acceptRequest('${data.requestId}')" 
-                            class="action-button accept-button">
-                        Accept
-                    </button>
-                    <button onclick="markRescued('${data.requestId}')" 
-                            class="action-button rescued-button">
-                        Mark Rescued
-                    </button>
-                </div>
-            `;
-            document.getElementById('sosRequests').prepend(div);
-        }
+    const div = document.createElement('div');
+    div.className = 'request-card';
+    div.id = `request-${data.requestId}`;
+    div.innerHTML = `
+        <div class="request-header">
+            <h3>🚨 Emergency Request</h3>
+            <small>${new Date(data.timestamp).toLocaleTimeString()}</small>
+        </div>
+        <p><strong>Coordinates:</strong> 
+            <span class="coordinates">${formatCoordinates(data.location)}</span>
+        </p>
+        <div class="request-actions">
+            <button onclick="acceptRequest('${data.requestId}')" 
+                    class="action-button accept-button">
+                Accept
+            </button>
+            <button onclick="markRescued('${data.requestId}')" 
+                    class="action-button rescued-button">
+                Mark Rescued
+            </button>
+        </div>
+    `;
+    document.getElementById('sosRequests').prepend(div);
+}
+
+// Add this helper function
+function formatCoordinates(coords) {
+    return `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+}
 
         function updateRequest(data) {
             const requestDiv = document.getElementById(`request-${data.requestId}`);
@@ -341,7 +348,9 @@
                         <h3>✅ Accepted Request</h3>
                         <small>${new Date(data.timestamp).toLocaleTimeString()}</small>
                     </div>
-                    <p><strong>Location:</strong> ${data.location}</p>
+                    <p><strong>Coordinates:</strong> 
+            <span class="coordinates">${formatCoordinates(data.location)}</span>
+        </p>
                     <p><strong>Responder:</strong> ${data.responder}</p>
                     <div class="request-actions">
                         <button onclick="markRescued('${data.requestId}')" 
