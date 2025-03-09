@@ -102,7 +102,15 @@ wss.user.on('connection', (ws) => {
 // NGO WebSocket handler
 wss.ngo.on('connection', (ws) => {
   console.log('NGO connected');
-  
+  // Send existing requests on connection
+  activeRequests.forEach((request, requestId) => {
+    if(request.status === 'pending') {
+      ws.send(JSON.stringify({
+        type: 'sos_request',
+        ...request
+      }));
+    }
+  });
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     
